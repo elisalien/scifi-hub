@@ -1,9 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Settings, X } from 'lucide-react';
+import { Save, Settings, X, User, AlertTriangle } from 'lucide-react';
 
 const SciFiHUD = () => {
   const [showControls, setShowControls] = useState(false);
   const [time, setTime] = useState(0);
+
+  // Custom overlays
+  const [showHumanScan, setShowHumanScan] = useState(false);
+  const [showDangerOverlay, setShowDangerOverlay] = useState(false);
+
+  // Human scan customizable data
+  const [humanData, setHumanData] = useState({
+    name: 'SUBJECT ALPHA',
+    age: '32',
+    height: '178',
+    weight: '75',
+    bloodType: 'O+',
+    species: 'HUMAN',
+    status: 'STABLE',
+  });
+
+  // Human scan animated data (non-customizable)
+  const [humanAnimatedData, setHumanAnimatedData] = useState({
+    heartRate: 72,
+    bloodPressure: { systolic: 120, diastolic: 80 },
+    oxygenLevel: 98,
+    bodyTemp: 36.6,
+    neuralActivity: 67,
+    brainwaves: Array(30).fill(0).map(() => Math.random() * 100),
+    scanProgress: 0,
+    respiratoryRate: 16,
+  });
 
   // Animated data states
   const [radarAngle, setRadarAngle] = useState(0);
@@ -50,12 +77,31 @@ const SciFiHUD = () => {
         circularProgress: prev.circularProgress.map(v => Math.max(20, Math.min(95, v + (Math.random() - 0.5) * 3))),
         scanProgress: (prev.scanProgress + 0.5) % 100,
       }));
+
+      // Animate human scan data
+      setHumanAnimatedData(prev => ({
+        heartRate: Math.max(60, Math.min(100, prev.heartRate + (Math.random() - 0.5) * 4)),
+        bloodPressure: {
+          systolic: Math.max(110, Math.min(130, prev.bloodPressure.systolic + (Math.random() - 0.5) * 2)),
+          diastolic: Math.max(70, Math.min(90, prev.bloodPressure.diastolic + (Math.random() - 0.5) * 2)),
+        },
+        oxygenLevel: Math.max(95, Math.min(100, prev.oxygenLevel + (Math.random() - 0.5) * 0.5)),
+        bodyTemp: Math.max(36.2, Math.min(37.2, prev.bodyTemp + (Math.random() - 0.5) * 0.1)),
+        neuralActivity: Math.max(40, Math.min(95, prev.neuralActivity + (Math.random() - 0.5) * 5)),
+        brainwaves: [...prev.brainwaves.slice(1), Math.random() * 100],
+        scanProgress: (prev.scanProgress + 1) % 100,
+        respiratoryRate: Math.max(12, Math.min(20, prev.respiratoryRate + (Math.random() - 0.5) * 1)),
+      }));
     }, 50);
 
     return () => clearInterval(interval);
   }, []);
 
   const formatNumber = (num, decimals = 2) => num.toFixed(decimals);
+
+  const updateHumanData = (field, value) => {
+    setHumanData(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="hud-container">
@@ -127,6 +173,292 @@ const SciFiHUD = () => {
             linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
           background-size: 40px 40px;
           z-index: 0;
+        }
+
+        /* Danger Overlay */
+        .danger-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 1001;
+          animation: danger-pulse 0.5s ease-in-out infinite;
+        }
+
+        .danger-overlay::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border: 8px solid #ff0000;
+          box-shadow: inset 0 0 100px rgba(255, 0, 0, 0.3), 0 0 50px rgba(255, 0, 0, 0.5);
+        }
+
+        .danger-text {
+          position: absolute;
+          top: 50px;
+          left: 50%;
+          transform: translateX(-50%);
+          font-family: 'Orbitron', sans-serif;
+          font-size: 3rem;
+          color: #ff0000;
+          text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+          animation: danger-blink 0.3s ease-in-out infinite;
+          letter-spacing: 0.3em;
+        }
+
+        .danger-corners {
+          position: absolute;
+          width: 100px;
+          height: 100px;
+        }
+
+        .danger-corners.tl { top: 20px; left: 20px; border-top: 4px solid #ff0000; border-left: 4px solid #ff0000; }
+        .danger-corners.tr { top: 20px; right: 20px; border-top: 4px solid #ff0000; border-right: 4px solid #ff0000; }
+        .danger-corners.bl { bottom: 20px; left: 20px; border-bottom: 4px solid #ff0000; border-left: 4px solid #ff0000; }
+        .danger-corners.br { bottom: 20px; right: 20px; border-bottom: 4px solid #ff0000; border-right: 4px solid #ff0000; }
+
+        @keyframes danger-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        @keyframes danger-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+
+        /* Human Scan Overlay */
+        .human-scan-overlay {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 800px;
+          height: 600px;
+          background: rgba(0, 10, 20, 0.95);
+          border: 2px solid #0ff;
+          z-index: 500;
+          display: flex;
+          box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+        }
+
+        .human-scan-left {
+          flex: 1;
+          padding: 20px;
+          border-right: 1px solid rgba(0, 255, 255, 0.3);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .human-silhouette {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .body-outline {
+          width: 150px;
+          height: 400px;
+          border: 2px solid #0ff;
+          border-radius: 75px 75px 20px 20px;
+          position: relative;
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 30px rgba(0, 255, 255, 0.1);
+        }
+
+        .body-outline::before {
+          content: '';
+          position: absolute;
+          top: -60px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 70px;
+          height: 70px;
+          border: 2px solid #0ff;
+          border-radius: 50%;
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .scan-line-human {
+          position: absolute;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: linear-gradient(90deg, transparent, #0ff, transparent);
+          box-shadow: 0 0 20px #0ff;
+          animation: human-scan 2s linear infinite;
+        }
+
+        @keyframes human-scan {
+          0% { top: -60px; }
+          100% { top: 100%; }
+        }
+
+        .body-hotspot {
+          position: absolute;
+          width: 12px;
+          height: 12px;
+          background: #0f0;
+          border-radius: 50%;
+          box-shadow: 0 0 10px #0f0;
+          animation: hotspot-pulse 1s ease-in-out infinite;
+        }
+
+        .body-hotspot.heart { top: 80px; left: 50%; transform: translateX(-50%); background: #ff0000; box-shadow: 0 0 10px #ff0000; }
+        .body-hotspot.brain { top: -45px; left: 50%; transform: translateX(-50%); background: #ff0; box-shadow: 0 0 10px #ff0; }
+        .body-hotspot.lungs-l { top: 100px; left: 25px; }
+        .body-hotspot.lungs-r { top: 100px; right: 25px; }
+
+        @keyframes hotspot-pulse {
+          0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+          50% { transform: translateX(-50%) scale(1.3); opacity: 0.7; }
+        }
+
+        .human-scan-right {
+          flex: 1.2;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .scan-header {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 1.2rem;
+          color: #0ff;
+          text-shadow: 0 0 10px #0ff;
+          margin-bottom: 10px;
+          letter-spacing: 0.2em;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .scan-data-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+          font-size: 0.85rem;
+        }
+
+        .scan-label {
+          color: #0aa;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .scan-value {
+          color: #0ff;
+          font-family: 'Orbitron', sans-serif;
+          text-shadow: 0 0 5px #0ff;
+        }
+
+        .scan-value.warning {
+          color: #ff6600;
+          text-shadow: 0 0 5px #ff6600;
+        }
+
+        .scan-value.critical {
+          color: #ff0000;
+          text-shadow: 0 0 5px #ff0000;
+          animation: critical-blink 0.5s infinite;
+        }
+
+        @keyframes critical-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .vitals-section {
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .vitals-title {
+          font-size: 0.8rem;
+          color: #ff6600;
+          margin-bottom: 10px;
+          letter-spacing: 0.15em;
+        }
+
+        .brainwave-container {
+          height: 60px;
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          margin-top: 10px;
+        }
+
+        .brainwave-bar {
+          width: 4px;
+          background: linear-gradient(to top, #0f0, #0ff);
+          box-shadow: 0 0 5px #0ff;
+          transition: height 0.05s ease;
+        }
+
+        .heart-monitor {
+          height: 50px;
+          background: rgba(0, 255, 255, 0.05);
+          border: 1px solid rgba(0, 255, 255, 0.2);
+          position: relative;
+          overflow: hidden;
+          margin-top: 10px;
+        }
+
+        .heart-line {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          width: 200%;
+          height: 2px;
+          background: repeating-linear-gradient(
+            90deg,
+            transparent 0px,
+            transparent 20px,
+            #0f0 20px,
+            #0f0 22px,
+            transparent 22px,
+            transparent 25px,
+            #0f0 25px,
+            #0f0 35px,
+            transparent 35px,
+            transparent 40px,
+            #0f0 40px,
+            #0f0 42px,
+            transparent 42px,
+            transparent 100px
+          );
+          animation: heart-scroll 1s linear infinite;
+          box-shadow: 0 0 10px #0f0;
+        }
+
+        @keyframes heart-scroll {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+
+        .scan-progress-bar {
+          height: 6px;
+          background: rgba(0, 255, 255, 0.1);
+          border-radius: 3px;
+          overflow: hidden;
+          margin-top: 10px;
+        }
+
+        .scan-progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #0ff, #0f0);
+          box-shadow: 0 0 10px #0ff;
+          transition: width 0.1s ease;
         }
 
         /* Main Layout */
@@ -394,26 +726,6 @@ const SciFiHUD = () => {
           50% { opacity: 0.3; box-shadow: 0 0 15px #0ff; }
         }
 
-        /* Hexagon */
-        .hexagon-container {
-          position: relative;
-          width: 60px;
-          height: 52px;
-          margin: 10px auto;
-        }
-
-        .hexagon {
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 255, 255, 0.1);
-          clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-          border: 1px solid #0ff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.8rem;
-        }
-
         /* Rotating Ring */
         .rotating-ring {
           position: absolute;
@@ -425,27 +737,6 @@ const SciFiHUD = () => {
         @keyframes rotate {
           from { transform: translate(-50%, -50%) rotate(0deg); }
           to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        /* Arc Segments */
-        .arc-container {
-          position: relative;
-          width: 100px;
-          height: 100px;
-        }
-
-        /* Scanning Line */
-        .scan-line {
-          position: absolute;
-          width: 100%;
-          height: 2px;
-          background: linear-gradient(90deg, transparent, #0ff, transparent);
-          animation: scan-vertical 3s linear infinite;
-        }
-
-        @keyframes scan-vertical {
-          0% { top: 0; opacity: 1; }
-          100% { top: 100%; opacity: 0.3; }
         }
 
         /* Status Indicators */
@@ -507,14 +798,34 @@ const SciFiHUD = () => {
           box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
 
+        .toolbar button.active {
+          background: rgba(0, 255, 255, 0.3);
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+        }
+
+        .toolbar button.danger-btn {
+          border-color: #ff0000;
+          color: #ff0000;
+        }
+
+        .toolbar button.danger-btn:hover {
+          background: rgba(255, 0, 0, 0.2);
+          box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        }
+
+        .toolbar button.danger-btn.active {
+          background: rgba(255, 0, 0, 0.4);
+          box-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+        }
+
         /* Control Panel */
         .control-panel {
           position: fixed;
           top: 0;
-          right: ${showControls ? '0' : '-350px'};
-          width: 350px;
+          right: ${showControls ? '0' : '-400px'};
+          width: 400px;
           height: 100vh;
-          background: rgba(0, 10, 20, 0.95);
+          background: rgba(0, 10, 20, 0.98);
           border-left: 2px solid #0ff;
           padding: 20px;
           overflow-y: auto;
@@ -529,6 +840,16 @@ const SciFiHUD = () => {
           font-size: 1rem;
         }
 
+        .control-panel h3 {
+          font-family: 'Orbitron', sans-serif;
+          letter-spacing: 0.1em;
+          font-size: 0.85rem;
+          color: #ff6600;
+          margin: 20px 0 15px 0;
+          padding-bottom: 10px;
+          border-bottom: 1px solid rgba(255, 102, 0, 0.3);
+        }
+
         .control-panel button {
           width: 100%;
           padding: 10px;
@@ -537,7 +858,100 @@ const SciFiHUD = () => {
           color: #0ff;
           cursor: pointer;
           font-family: 'Orbitron', sans-serif;
-          margin-top: 20px;
+          margin-top: 10px;
+          transition: all 0.3s;
+        }
+
+        .control-panel button:hover {
+          background: rgba(0, 255, 255, 0.2);
+        }
+
+        .toggle-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+        }
+
+        .toggle-label {
+          font-size: 0.85rem;
+          color: #0aa;
+        }
+
+        .toggle-switch {
+          width: 50px;
+          height: 26px;
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid #0ff;
+          border-radius: 13px;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+          background: rgba(0, 255, 255, 0.3);
+        }
+
+        .toggle-switch::after {
+          content: '';
+          position: absolute;
+          top: 3px;
+          left: 3px;
+          width: 18px;
+          height: 18px;
+          background: #0ff;
+          border-radius: 50%;
+          transition: all 0.3s;
+          box-shadow: 0 0 10px #0ff;
+        }
+
+        .toggle-switch.active::after {
+          left: 27px;
+        }
+
+        .toggle-switch.danger {
+          border-color: #ff0000;
+        }
+
+        .toggle-switch.danger.active {
+          background: rgba(255, 0, 0, 0.3);
+        }
+
+        .toggle-switch.danger::after {
+          background: #ff0000;
+          box-shadow: 0 0 10px #ff0000;
+        }
+
+        .input-group {
+          margin: 10px 0;
+        }
+
+        .input-label {
+          font-size: 0.75rem;
+          color: #0aa;
+          margin-bottom: 5px;
+          display: block;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .input-field {
+          width: 100%;
+          padding: 10px;
+          background: rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(0, 255, 255, 0.3);
+          color: #0ff;
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.9rem;
+          transition: all 0.3s;
+        }
+
+        .input-field:focus {
+          outline: none;
+          border-color: #0ff;
+          box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
 
         /* Ticker Display */
@@ -571,13 +985,6 @@ const SciFiHUD = () => {
           width: 6px;
           background: linear-gradient(to top, #0aa, #0ff);
           transition: height 0.1s;
-        }
-
-        /* Connection Lines */
-        .connection-line {
-          position: absolute;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.5), transparent);
         }
 
         /* Bottom Bar */
@@ -624,9 +1031,155 @@ const SciFiHUD = () => {
           color: #0ff;
           font-family: 'Orbitron', sans-serif;
         }
+
+        .close-scan-btn {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 30px;
+          height: 30px;
+          background: transparent;
+          border: 1px solid #0ff;
+          color: #0ff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s;
+        }
+
+        .close-scan-btn:hover {
+          background: rgba(0, 255, 255, 0.2);
+        }
       `}</style>
 
       <div className="grid-bg"></div>
+
+      {/* Danger Overlay */}
+      {showDangerOverlay && (
+        <div className="danger-overlay">
+          <div className="danger-text">DANGER</div>
+          <div className="danger-corners tl"></div>
+          <div className="danger-corners tr"></div>
+          <div className="danger-corners bl"></div>
+          <div className="danger-corners br"></div>
+        </div>
+      )}
+
+      {/* Human Scan Overlay */}
+      {showHumanScan && (
+        <div className="human-scan-overlay">
+          <button className="close-scan-btn" onClick={() => setShowHumanScan(false)}>
+            <X size={16} />
+          </button>
+          <div className="human-scan-left">
+            <div className="human-silhouette">
+              <div className="body-outline">
+                <div className="scan-line-human"></div>
+                <div className="body-hotspot heart"></div>
+                <div className="body-hotspot brain"></div>
+                <div className="body-hotspot lungs-l"></div>
+                <div className="body-hotspot lungs-r"></div>
+              </div>
+            </div>
+          </div>
+          <div className="human-scan-right">
+            <div className="scan-header">
+              BIOMETRIC SCAN
+              <span style={{ fontSize: '0.7rem', color: '#0f0' }}>ACTIVE</span>
+            </div>
+
+            <div className="scan-data-row">
+              <span className="scan-label">Subject</span>
+              <span className="scan-value">{humanData.name}</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Species</span>
+              <span className="scan-value">{humanData.species}</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Age</span>
+              <span className="scan-value">{humanData.age} YRS</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Height</span>
+              <span className="scan-value">{humanData.height} CM</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Weight</span>
+              <span className="scan-value">{humanData.weight} KG</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Blood Type</span>
+              <span className="scan-value">{humanData.bloodType}</span>
+            </div>
+            <div className="scan-data-row">
+              <span className="scan-label">Status</span>
+              <span className="scan-value" style={{ color: '#0f0' }}>{humanData.status}</span>
+            </div>
+
+            <div className="vitals-section">
+              <div className="vitals-title">LIVE VITALS</div>
+              <div className="scan-data-row">
+                <span className="scan-label">Heart Rate</span>
+                <span className="scan-value">{Math.round(humanAnimatedData.heartRate)} BPM</span>
+              </div>
+              <div className="scan-data-row">
+                <span className="scan-label">Blood Pressure</span>
+                <span className="scan-value">
+                  {Math.round(humanAnimatedData.bloodPressure.systolic)}/{Math.round(humanAnimatedData.bloodPressure.diastolic)}
+                </span>
+              </div>
+              <div className="scan-data-row">
+                <span className="scan-label">O2 Saturation</span>
+                <span className="scan-value">{humanAnimatedData.oxygenLevel.toFixed(1)}%</span>
+              </div>
+              <div className="scan-data-row">
+                <span className="scan-label">Body Temp</span>
+                <span className="scan-value">{humanAnimatedData.bodyTemp.toFixed(1)}°C</span>
+              </div>
+              <div className="scan-data-row">
+                <span className="scan-label">Respiratory</span>
+                <span className="scan-value">{Math.round(humanAnimatedData.respiratoryRate)} /min</span>
+              </div>
+              <div className="scan-data-row">
+                <span className="scan-label">Neural Activity</span>
+                <span className="scan-value">{Math.round(humanAnimatedData.neuralActivity)}%</span>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 15 }}>
+              <div style={{ fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>BRAINWAVE PATTERN</div>
+              <div className="brainwave-container">
+                {humanAnimatedData.brainwaves.map((v, i) => (
+                  <div
+                    key={i}
+                    className="brainwave-bar"
+                    style={{ height: `${v * 0.6}%` }}
+                  ></div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>CARDIAC RHYTHM</div>
+              <div className="heart-monitor">
+                <div className="heart-line"></div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>
+                <span>SCAN PROGRESS</span>
+                <span style={{ color: '#0ff' }}>{Math.round(humanAnimatedData.scanProgress)}%</span>
+              </div>
+              <div className="scan-progress-bar">
+                <div className="scan-progress-fill" style={{ width: `${humanAnimatedData.scanProgress}%` }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Decorative Elements */}
       <div className="floating-circle" style={{ width: 100, height: 100, top: '10%', left: '5%', animationDelay: '0s' }}></div>
@@ -640,9 +1193,11 @@ const SciFiHUD = () => {
       <div className="pulsing-dot" style={{ bottom: '20%', right: '15%', animationDelay: '1.5s' }}></div>
 
       {/* Top Bar */}
-      <div className="top-bar">
+      <div className="top-bar" style={{ borderColor: showDangerOverlay ? '#ff0000' : undefined }}>
         <div className="top-bar-item">
-          SYS <span className="top-bar-value">ONLINE</span>
+          SYS <span className="top-bar-value" style={{ color: showDangerOverlay ? '#ff0000' : undefined }}>
+            {showDangerOverlay ? 'ALERT' : 'ONLINE'}
+          </span>
         </div>
         <div className="top-bar-item">
           FREQ <span className="top-bar-value">{(2400 + Math.sin(time * 0.1) * 50).toFixed(1)} MHz</span>
@@ -664,6 +1219,20 @@ const SciFiHUD = () => {
 
       {/* Toolbar */}
       <div className="toolbar">
+        <button
+          onClick={() => setShowHumanScan(!showHumanScan)}
+          title="Human Scan"
+          className={showHumanScan ? 'active' : ''}
+        >
+          <User size={20} />
+        </button>
+        <button
+          onClick={() => setShowDangerOverlay(!showDangerOverlay)}
+          title="Danger Alert"
+          className={`danger-btn ${showDangerOverlay ? 'active' : ''}`}
+        >
+          <AlertTriangle size={20} />
+        </button>
         <button onClick={() => setShowControls(!showControls)} title="Settings">
           <Settings size={20} />
         </button>
@@ -741,8 +1310,8 @@ const SciFiHUD = () => {
               <span style={{ fontSize: '0.75rem' }}>SYNC ACTIVE</span>
             </div>
             <div className="status-row">
-              <div className="status-dot active"></div>
-              <span style={{ fontSize: '0.75rem' }}>NETWORK OK</span>
+              <div className={`status-dot ${showDangerOverlay ? 'warning' : 'active'}`}></div>
+              <span style={{ fontSize: '0.75rem' }}>{showDangerOverlay ? 'ALERT MODE' : 'NETWORK OK'}</span>
             </div>
           </div>
         </div>
@@ -757,7 +1326,8 @@ const SciFiHUD = () => {
                 width: 480,
                 height: 480,
                 top: '50%',
-                left: '50%'
+                left: '50%',
+                borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.3)' : undefined
               }}
             ></div>
             <div
@@ -768,15 +1338,16 @@ const SciFiHUD = () => {
                 top: '50%',
                 left: '50%',
                 animationDirection: 'reverse',
-                animationDuration: '30s'
+                animationDuration: '30s',
+                borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.3)' : undefined
               }}
             ></div>
 
             {/* Static rings */}
-            <div className="radar-ring radar-ring-1"></div>
-            <div className="radar-ring radar-ring-2"></div>
-            <div className="radar-ring radar-ring-3"></div>
-            <div className="radar-ring radar-ring-4"></div>
+            <div className="radar-ring radar-ring-1" style={{ borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.3)' : undefined }}></div>
+            <div className="radar-ring radar-ring-2" style={{ borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.2)' : undefined }}></div>
+            <div className="radar-ring radar-ring-3" style={{ borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.2)' : undefined }}></div>
+            <div className="radar-ring radar-ring-4" style={{ borderColor: showDangerOverlay ? 'rgba(255, 0, 0, 0.2)' : undefined }}></div>
 
             {/* Crosshair */}
             <div className="radar-crosshair"></div>
@@ -784,7 +1355,11 @@ const SciFiHUD = () => {
             {/* Sweep */}
             <div
               className="radar-sweep"
-              style={{ transform: `rotate(${radarAngle}deg)` }}
+              style={{
+                transform: `rotate(${radarAngle}deg)`,
+                background: showDangerOverlay ? 'linear-gradient(90deg, #ff0000, transparent)' : undefined,
+                boxShadow: showDangerOverlay ? '0 0 20px #ff0000, 0 0 40px #ff0000' : undefined
+              }}
             ></div>
 
             {/* Blips */}
@@ -834,13 +1409,14 @@ const SciFiHUD = () => {
               <div style={{
                 fontSize: '2rem',
                 fontFamily: 'Orbitron',
-                textShadow: '0 0 20px #0ff',
+                textShadow: showDangerOverlay ? '0 0 20px #ff0000' : '0 0 20px #0ff',
+                color: showDangerOverlay ? '#ff0000' : '#0ff',
                 marginBottom: 5
               }}>
                 {formatNumber(dataValues.scanProgress, 0)}%
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#0aa', letterSpacing: '0.2em' }}>
-                SCANNING
+              <div style={{ fontSize: '0.7rem', color: showDangerOverlay ? '#ff6600' : '#0aa', letterSpacing: '0.2em' }}>
+                {showDangerOverlay ? 'ALERT' : 'SCANNING'}
               </div>
             </div>
 
@@ -854,7 +1430,7 @@ const SciFiHUD = () => {
                 cy="225"
                 r="200"
                 fill="none"
-                stroke="rgba(0, 255, 255, 0.1)"
+                stroke={showDangerOverlay ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 255, 0.1)'}
                 strokeWidth="8"
               />
               <circle
@@ -862,12 +1438,12 @@ const SciFiHUD = () => {
                 cy="225"
                 r="200"
                 fill="none"
-                stroke="#0ff"
+                stroke={showDangerOverlay ? '#ff0000' : '#0ff'}
                 strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={`${dataValues.scanProgress * 12.56} 1256`}
                 transform="rotate(-90 225 225)"
-                style={{ filter: 'drop-shadow(0 0 10px #0ff)' }}
+                style={{ filter: `drop-shadow(0 0 10px ${showDangerOverlay ? '#ff0000' : '#0ff'})` }}
               />
             </svg>
           </div>
@@ -970,14 +1546,19 @@ const SciFiHUD = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="bottom-bar">
+      <div className="bottom-bar" style={{ borderColor: showDangerOverlay ? '#ff0000' : undefined }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="status-dot active"></div>
-          <span style={{ fontSize: '0.75rem' }}>OPERATIONAL</span>
+          <div className={`status-dot ${showDangerOverlay ? 'warning' : 'active'}`}></div>
+          <span style={{ fontSize: '0.75rem', color: showDangerOverlay ? '#ff0000' : undefined }}>
+            {showDangerOverlay ? 'DANGER' : 'OPERATIONAL'}
+          </span>
         </div>
         <div className="ticker" style={{ flex: 1, overflow: 'hidden' }}>
-          <span className="ticker-content">
-            SYSTEM NOMINAL // QUANTUM ARRAY SYNCHRONIZED // SECTOR 7 SCAN ACTIVE // NAVIGATION LOCKED // SHIELDS AT 100% // DATA STREAM ACTIVE // CORE TEMPERATURE STABLE //
+          <span className="ticker-content" style={{ color: showDangerOverlay ? '#ff6600' : undefined }}>
+            {showDangerOverlay
+              ? 'WARNING // DANGER DETECTED // ALERT STATUS ACTIVE // TAKE IMMEDIATE ACTION // WARNING // DANGER DETECTED //'
+              : 'SYSTEM NOMINAL // QUANTUM ARRAY SYNCHRONIZED // SECTOR 7 SCAN ACTIVE // NAVIGATION LOCKED // SHIELDS AT 100% // DATA STREAM ACTIVE // CORE TEMPERATURE STABLE //'
+            }
           </span>
         </div>
         <div style={{ fontSize: '0.75rem', color: '#0aa' }}>
@@ -991,10 +1572,89 @@ const SciFiHUD = () => {
       {/* Control Panel */}
       <div className="control-panel">
         <h2>SETTINGS</h2>
-        <p style={{ color: '#0aa', fontSize: '0.8rem', marginBottom: 20 }}>
-          HUD is running in continuous animation mode. All data values are dynamically updating.
-        </p>
-        <button onClick={() => setShowControls(false)}>
+
+        <h3>OVERLAYS</h3>
+        <div className="toggle-row">
+          <span className="toggle-label">Human Scan</span>
+          <div
+            className={`toggle-switch ${showHumanScan ? 'active' : ''}`}
+            onClick={() => setShowHumanScan(!showHumanScan)}
+          ></div>
+        </div>
+        <div className="toggle-row">
+          <span className="toggle-label">Danger Alert</span>
+          <div
+            className={`toggle-switch danger ${showDangerOverlay ? 'active' : ''}`}
+            onClick={() => setShowDangerOverlay(!showDangerOverlay)}
+          ></div>
+        </div>
+
+        {showHumanScan && (
+          <>
+            <h3>HUMAN SCAN DATA</h3>
+            <div className="input-group">
+              <label className="input-label">Subject Name</label>
+              <input
+                className="input-field"
+                value={humanData.name}
+                onChange={(e) => updateHumanData('name', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Species</label>
+              <input
+                className="input-field"
+                value={humanData.species}
+                onChange={(e) => updateHumanData('species', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Age (years)</label>
+              <input
+                className="input-field"
+                value={humanData.age}
+                onChange={(e) => updateHumanData('age', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Height (cm)</label>
+              <input
+                className="input-field"
+                value={humanData.height}
+                onChange={(e) => updateHumanData('height', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Weight (kg)</label>
+              <input
+                className="input-field"
+                value={humanData.weight}
+                onChange={(e) => updateHumanData('weight', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Blood Type</label>
+              <input
+                className="input-field"
+                value={humanData.bloodType}
+                onChange={(e) => updateHumanData('bloodType', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Status</label>
+              <input
+                className="input-field"
+                value={humanData.status}
+                onChange={(e) => updateHumanData('status', e.target.value)}
+              />
+            </div>
+            <p style={{ fontSize: '0.7rem', color: '#0aa', marginTop: 15 }}>
+              Note: Vital signs (heart rate, blood pressure, etc.) are automatically animated and cannot be customized.
+            </p>
+          </>
+        )}
+
+        <button onClick={() => setShowControls(false)} style={{ marginTop: 30 }}>
           CLOSE
         </button>
       </div>
