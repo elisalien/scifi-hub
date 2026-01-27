@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Settings, X, User, AlertTriangle } from 'lucide-react';
+import { Save, Settings, X, User, AlertTriangle, Play } from 'lucide-react';
 
 const SciFiHUD = () => {
   const [showControls, setShowControls] = useState(false);
@@ -8,6 +8,12 @@ const SciFiHUD = () => {
   // Custom overlays
   const [showHumanScan, setShowHumanScan] = useState(false);
   const [showDangerOverlay, setShowDangerOverlay] = useState(false);
+
+  // Scan animation states
+  const [scanMode, setScanMode] = useState('idle'); // 'idle' | 'countdown' | 'scanning' | 'complete'
+  const [countdown, setCountdown] = useState(3);
+  const [scanRevealStep, setScanRevealStep] = useState(0);
+  const [scanAnimationProgress, setScanAnimationProgress] = useState(0);
 
   // Human scan customizable data
   const [humanData, setHumanData] = useState({
@@ -97,10 +103,81 @@ const SciFiHUD = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Scan animation effect
+  useEffect(() => {
+    if (scanMode === 'countdown') {
+      if (countdown > 0) {
+        const timer = setTimeout(() => {
+          setCountdown(c => c - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        setScanMode('scanning');
+        setScanRevealStep(0);
+        setScanAnimationProgress(0);
+      }
+    }
+
+    if (scanMode === 'scanning') {
+      const totalSteps = 15; // Total number of data fields to reveal
+      const scanDuration = 8000; // 8 seconds total scan
+      const stepDuration = scanDuration / totalSteps;
+
+      const progressInterval = setInterval(() => {
+        setScanAnimationProgress(prev => {
+          const newProgress = prev + (100 / (scanDuration / 50));
+          if (newProgress >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return newProgress;
+        });
+      }, 50);
+
+      const revealInterval = setInterval(() => {
+        setScanRevealStep(prev => {
+          if (prev >= totalSteps) {
+            clearInterval(revealInterval);
+            setScanMode('complete');
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, stepDuration);
+
+      return () => {
+        clearInterval(progressInterval);
+        clearInterval(revealInterval);
+      };
+    }
+  }, [scanMode, countdown]);
+
+  const startScanAnimation = () => {
+    setShowHumanScan(true);
+    setScanMode('countdown');
+    setCountdown(3);
+    setScanRevealStep(0);
+    setScanAnimationProgress(0);
+  };
+
+  const resetScan = () => {
+    setScanMode('idle');
+    setScanRevealStep(0);
+    setScanAnimationProgress(0);
+    setCountdown(3);
+  };
+
   const formatNumber = (num, decimals = 2) => num.toFixed(decimals);
 
   const updateHumanData = (field, value) => {
     setHumanData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Check if a field should be visible based on scan progress
+  const isFieldVisible = (fieldIndex) => {
+    if (scanMode === 'idle' || scanMode === 'complete') return true;
+    if (scanMode === 'countdown') return false;
+    return scanRevealStep >= fieldIndex;
   };
 
   return (
@@ -1051,6 +1128,145 @@ const SciFiHUD = () => {
         .close-scan-btn:hover {
           background: rgba(0, 255, 255, 0.2);
         }
+
+        /* Countdown Overlay */
+        .countdown-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+        }
+
+        .countdown-number {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 8rem;
+          color: #0ff;
+          text-shadow: 0 0 50px #0ff, 0 0 100px #0ff;
+          animation: countdown-pulse 1s ease-in-out;
+        }
+
+        @keyframes countdown-pulse {
+          0% { transform: scale(0.5); opacity: 0; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        .countdown-text {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 1.2rem;
+          color: #0aa;
+          letter-spacing: 0.3em;
+          margin-top: 20px;
+        }
+
+        /* Scan reveal animation */
+        .scan-field {
+          opacity: 0;
+          transform: translateX(-20px);
+          transition: all 0.5s ease-out;
+        }
+
+        .scan-field.visible {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .scan-field.hidden {
+          opacity: 0;
+          height: 0;
+          padding: 0;
+          margin: 0;
+          overflow: hidden;
+        }
+
+        /* Scanning indicator */
+        .scanning-indicator {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid #0ff;
+          margin-bottom: 15px;
+        }
+
+        .scanning-dot {
+          width: 10px;
+          height: 10px;
+          background: #0ff;
+          border-radius: 50%;
+          animation: scanning-blink 0.5s ease-in-out infinite;
+        }
+
+        @keyframes scanning-blink {
+          0%, 100% { opacity: 1; box-shadow: 0 0 10px #0ff; }
+          50% { opacity: 0.3; box-shadow: 0 0 20px #0ff; }
+        }
+
+        .scanning-text {
+          font-size: 0.8rem;
+          color: #0ff;
+          letter-spacing: 0.2em;
+          animation: scanning-text-blink 1s ease-in-out infinite;
+        }
+
+        @keyframes scanning-text-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        /* Start scan button */
+        .start-scan-btn {
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.1));
+          border: 2px solid #0ff;
+          color: #0ff;
+          padding: 15px 30px;
+          font-family: 'Orbitron', sans-serif;
+          font-size: 1rem;
+          cursor: pointer;
+          letter-spacing: 0.2em;
+          transition: all 0.3s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 20px;
+          width: 100%;
+        }
+
+        .start-scan-btn:hover {
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.3), rgba(0, 255, 255, 0.2));
+          box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+          transform: scale(1.02);
+        }
+
+        .start-scan-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* Scan complete indicator */
+        .scan-complete {
+          background: rgba(0, 255, 0, 0.1);
+          border: 1px solid #0f0;
+          padding: 10px;
+          text-align: center;
+          margin-bottom: 15px;
+        }
+
+        .scan-complete-text {
+          color: #0f0;
+          font-family: 'Orbitron', sans-serif;
+          letter-spacing: 0.2em;
+          font-size: 0.9rem;
+        }
       `}</style>
 
       <div className="grid-bg"></div>
@@ -1069,86 +1285,116 @@ const SciFiHUD = () => {
       {/* Human Scan Overlay */}
       {showHumanScan && (
         <div className="human-scan-overlay">
-          <button className="close-scan-btn" onClick={() => setShowHumanScan(false)}>
+          <button className="close-scan-btn" onClick={() => { setShowHumanScan(false); resetScan(); }}>
             <X size={16} />
           </button>
+
+          {/* Countdown Overlay */}
+          {scanMode === 'countdown' && (
+            <div className="countdown-overlay">
+              <div className="countdown-number" key={countdown}>
+                {countdown}
+              </div>
+              <div className="countdown-text">INITIALIZING SCAN</div>
+            </div>
+          )}
+
           <div className="human-scan-left">
             <div className="human-silhouette">
               <div className="body-outline">
-                <div className="scan-line-human"></div>
-                <div className="body-hotspot heart"></div>
-                <div className="body-hotspot brain"></div>
-                <div className="body-hotspot lungs-l"></div>
-                <div className="body-hotspot lungs-r"></div>
+                {(scanMode === 'scanning' || scanMode === 'complete' || scanMode === 'idle') && (
+                  <div className="scan-line-human"></div>
+                )}
+                {isFieldVisible(8) && <div className="body-hotspot heart"></div>}
+                {isFieldVisible(13) && <div className="body-hotspot brain"></div>}
+                {isFieldVisible(9) && <div className="body-hotspot lungs-l"></div>}
+                {isFieldVisible(9) && <div className="body-hotspot lungs-r"></div>}
               </div>
             </div>
           </div>
           <div className="human-scan-right">
             <div className="scan-header">
               BIOMETRIC SCAN
-              <span style={{ fontSize: '0.7rem', color: '#0f0' }}>ACTIVE</span>
+              <span style={{ fontSize: '0.7rem', color: scanMode === 'complete' ? '#0f0' : scanMode === 'scanning' ? '#ff0' : '#0aa' }}>
+                {scanMode === 'complete' ? 'COMPLETE' : scanMode === 'scanning' ? 'IN PROGRESS' : scanMode === 'countdown' ? 'STARTING' : 'READY'}
+              </span>
             </div>
 
-            <div className="scan-data-row">
+            {/* Scanning indicator */}
+            {scanMode === 'scanning' && (
+              <div className="scanning-indicator">
+                <div className="scanning-dot"></div>
+                <span className="scanning-text">ANALYZING SUBJECT...</span>
+              </div>
+            )}
+
+            {/* Scan complete indicator */}
+            {scanMode === 'complete' && (
+              <div className="scan-complete">
+                <span className="scan-complete-text">SCAN COMPLETE</span>
+              </div>
+            )}
+
+            <div className={`scan-data-row scan-field ${isFieldVisible(1) ? 'visible' : ''}`}>
               <span className="scan-label">Subject</span>
               <span className="scan-value">{humanData.name}</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(2) ? 'visible' : ''}`}>
               <span className="scan-label">Species</span>
               <span className="scan-value">{humanData.species}</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(3) ? 'visible' : ''}`}>
               <span className="scan-label">Age</span>
               <span className="scan-value">{humanData.age} YRS</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(4) ? 'visible' : ''}`}>
               <span className="scan-label">Height</span>
               <span className="scan-value">{humanData.height} CM</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(5) ? 'visible' : ''}`}>
               <span className="scan-label">Weight</span>
               <span className="scan-value">{humanData.weight} KG</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(6) ? 'visible' : ''}`}>
               <span className="scan-label">Blood Type</span>
               <span className="scan-value">{humanData.bloodType}</span>
             </div>
-            <div className="scan-data-row">
+            <div className={`scan-data-row scan-field ${isFieldVisible(7) ? 'visible' : ''}`}>
               <span className="scan-label">Status</span>
               <span className="scan-value" style={{ color: '#0f0' }}>{humanData.status}</span>
             </div>
 
-            <div className="vitals-section">
+            <div className={`vitals-section scan-field ${isFieldVisible(8) ? 'visible' : ''}`}>
               <div className="vitals-title">LIVE VITALS</div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(8) ? 'visible' : ''}`}>
                 <span className="scan-label">Heart Rate</span>
                 <span className="scan-value">{Math.round(humanAnimatedData.heartRate)} BPM</span>
               </div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(9) ? 'visible' : ''}`}>
                 <span className="scan-label">Blood Pressure</span>
                 <span className="scan-value">
                   {Math.round(humanAnimatedData.bloodPressure.systolic)}/{Math.round(humanAnimatedData.bloodPressure.diastolic)}
                 </span>
               </div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(10) ? 'visible' : ''}`}>
                 <span className="scan-label">O2 Saturation</span>
                 <span className="scan-value">{humanAnimatedData.oxygenLevel.toFixed(1)}%</span>
               </div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(11) ? 'visible' : ''}`}>
                 <span className="scan-label">Body Temp</span>
                 <span className="scan-value">{humanAnimatedData.bodyTemp.toFixed(1)}°C</span>
               </div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(12) ? 'visible' : ''}`}>
                 <span className="scan-label">Respiratory</span>
                 <span className="scan-value">{Math.round(humanAnimatedData.respiratoryRate)} /min</span>
               </div>
-              <div className="scan-data-row">
+              <div className={`scan-data-row scan-field ${isFieldVisible(13) ? 'visible' : ''}`}>
                 <span className="scan-label">Neural Activity</span>
                 <span className="scan-value">{Math.round(humanAnimatedData.neuralActivity)}%</span>
               </div>
             </div>
 
-            <div style={{ marginTop: 15 }}>
+            <div className={`scan-field ${isFieldVisible(14) ? 'visible' : ''}`} style={{ marginTop: 15 }}>
               <div style={{ fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>BRAINWAVE PATTERN</div>
               <div className="brainwave-container">
                 {humanAnimatedData.brainwaves.map((v, i) => (
@@ -1161,7 +1407,7 @@ const SciFiHUD = () => {
               </div>
             </div>
 
-            <div style={{ marginTop: 10 }}>
+            <div className={`scan-field ${isFieldVisible(14) ? 'visible' : ''}`} style={{ marginTop: 10 }}>
               <div style={{ fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>CARDIAC RHYTHM</div>
               <div className="heart-monitor">
                 <div className="heart-line"></div>
@@ -1171,10 +1417,18 @@ const SciFiHUD = () => {
             <div style={{ marginTop: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#0aa', marginBottom: 5 }}>
                 <span>SCAN PROGRESS</span>
-                <span style={{ color: '#0ff' }}>{Math.round(humanAnimatedData.scanProgress)}%</span>
+                <span style={{ color: '#0ff' }}>
+                  {scanMode === 'scanning' ? Math.round(scanAnimationProgress) : scanMode === 'complete' ? 100 : scanMode === 'idle' ? 100 : 0}%
+                </span>
               </div>
               <div className="scan-progress-bar">
-                <div className="scan-progress-fill" style={{ width: `${humanAnimatedData.scanProgress}%` }}></div>
+                <div
+                  className="scan-progress-fill"
+                  style={{
+                    width: `${scanMode === 'scanning' ? scanAnimationProgress : scanMode === 'complete' || scanMode === 'idle' ? 100 : 0}%`,
+                    background: scanMode === 'complete' ? 'linear-gradient(90deg, #0f0, #0a0)' : undefined
+                  }}
+                ></div>
               </div>
             </div>
           </div>
@@ -1598,6 +1852,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.name}
                 onChange={(e) => updateHumanData('name', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1606,6 +1861,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.species}
                 onChange={(e) => updateHumanData('species', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1614,6 +1870,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.age}
                 onChange={(e) => updateHumanData('age', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1622,6 +1879,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.height}
                 onChange={(e) => updateHumanData('height', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1630,6 +1888,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.weight}
                 onChange={(e) => updateHumanData('weight', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1638,6 +1897,7 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.bloodType}
                 onChange={(e) => updateHumanData('bloodType', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <div className="input-group">
@@ -1646,11 +1906,33 @@ const SciFiHUD = () => {
                 className="input-field"
                 value={humanData.status}
                 onChange={(e) => updateHumanData('status', e.target.value)}
+                disabled={scanMode === 'scanning' || scanMode === 'countdown'}
               />
             </div>
             <p style={{ fontSize: '0.7rem', color: '#0aa', marginTop: 15 }}>
               Note: Vital signs (heart rate, blood pressure, etc.) are automatically animated and cannot be customized.
             </p>
+
+            <h3>SCAN ANIMATION</h3>
+            <p style={{ fontSize: '0.7rem', color: '#0aa', marginBottom: 15 }}>
+              Launch an animated scan sequence with a 3-second countdown, then data will be revealed progressively.
+            </p>
+            <button
+              className="start-scan-btn"
+              onClick={startScanAnimation}
+              disabled={scanMode === 'scanning' || scanMode === 'countdown'}
+            >
+              <Play size={20} />
+              {scanMode === 'scanning' ? 'SCANNING...' : scanMode === 'countdown' ? 'STARTING...' : 'START SCAN'}
+            </button>
+            {(scanMode === 'complete' || scanMode === 'scanning') && (
+              <button
+                onClick={resetScan}
+                style={{ marginTop: 10, background: 'rgba(255, 102, 0, 0.1)', borderColor: '#ff6600', color: '#ff6600' }}
+              >
+                RESET SCAN
+              </button>
+            )}
           </>
         )}
 
