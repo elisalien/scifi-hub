@@ -1,155 +1,101 @@
-# Sci-Fi HUD - Interface CRT/Matrix/Cyberpunk
+# Sci-Fi HUD
 
-Application web interactive avec style HUD vaisseau spatial pour performances vidéo live.
+> Interface HUD de vaisseau spatial au style CRT / Matrix / cyberpunk, pensée comme source vidéo pour les performances live.
 
-## 🚀 Features
+![Platform](https://img.shields.io/badge/platform-Web-informational) ![Stack](https://img.shields.io/badge/stack-React%20%2B%20Vite-blue)
 
-- **Style CRT authentique** : scanlines, vignetting, glitch effects
-- **Système de presets** : sauvegarde et chargement de configurations
-- **100% customisable** : tous les textes, métriques et alertes modifiables en temps réel
-- **Animations looping** : effects visuels continus
-- **Vocabulaire SF** : placeholders et données dans l'univers spatial/cyberpunk
+## À propos
 
-## 📦 Installation locale
+Sci-Fi HUD est une application web React qui affiche en plein écran un tableau de bord de science-fiction entièrement animé (radar, coordonnées, métriques, spectres, alertes). Elle est conçue pour être capturée dans OBS puis envoyée vers Resolume pendant un spectacle ou une performance vidéo live. L'interface est optimisée pour du 1920x1080.
+
+## Fonctionnalités
+
+- **Style CRT** : scanlines, vignetage, effets de glitch et éléments décoratifs flottants
+- **Données animées en boucle** : coordonnées LAT / LONG / ALT, fréquence, radar, forme d'onde, charge système, métriques (core temp, radiation, plasma, output), analyse de fréquence, force du signal, spectre
+- **Overlay « Human Scan »** : fiche de scan d'un sujet avec constantes animées (rythme cardiaque, tension, O2, température, respiration, activité neuronale, ondes cérébrales)
+- **Overlay « Danger Alert »** : alerte rouge clignotante qui fait aussi passer la barre du haut et le statut en mode alerte
+- **Données du sujet personnalisables** en temps réel depuis le panneau Settings (nom, espèce, âge, taille, poids, groupe sanguin, statut)
+- **Vocabulaire SF** intégré (CORE ONLINE, SYNC ACTIVE, PLASMA, RADIATION…)
+
+## Installation
+
+Prérequis : Node.js et npm.
 
 ```bash
 npm install
 npm run dev
 ```
 
-L'app sera accessible sur `http://localhost:5173`
+L'app est accessible sur `http://localhost:5173`.
 
-## 🌐 Déploiement sur Netlify
+Build de production (dossier `dist/`) :
 
-### Option 1 : Via GitHub (Recommandé)
-
-1. **Push ton code sur GitHub :**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/TON_USERNAME/hud-scifi.git
-   git push -u origin main
-   ```
-
-2. **Sur Netlify :**
-   - Va sur [netlify.com](https://netlify.com) et connecte-toi
-   - Clique sur "Add new site" → "Import an existing project"
-   - Choisis GitHub et sélectionne ton repo
-   - Build settings :
-     - **Build command:** `npm run build`
-     - **Publish directory:** `dist`
-   - Clique sur "Deploy site"
-
-3. **URL custom (optionnel) :**
-   - Site settings → Domain management → Add custom domain
-
-### Option 2 : Drag & Drop direct
-
-1. **Build localement :**
-   ```bash
-   npm run build
-   ```
-
-2. **Sur Netlify :**
-   - Va sur [netlify.com](https://netlify.com)
-   - Glisse-dépose le dossier `dist` directement sur la page
-
-## 🎮 Utilisation avec OBS → Resolume
-
-### Setup OBS
-
-1. **Ajouter une source Browser :**
-   - Sources → + → Browser
-   - Pour version locale : `http://localhost:5173`
-   - Pour version déployée : `https://ton-site.netlify.app`
-   - Résolution : 1920x1080
-   - FPS : 60
-   - ✅ Cocher "Shutdown source when not visible" (perfs)
-   - ✅ Cocher "Refresh browser when scene becomes active"
-
-2. **Optimisation :**
-   - Cache le panneau de contrôle avant la capture (bouton ⚙️)
-   - Mode Play (▶) pour animations continues
-
-3. **Vers Resolume :**
-   - OBS → Virtual Camera
-   - Resolume → Input → Syphon/NDI/Virtual Cam
-
-## 🎨 Contrôles
-
-### Toolbar (top-right)
-- **▶/⏸** : Play/Pause animations glitch
-- **💾** : Sauvegarder preset actuel
-- **⚙️** : Ouvrir panneau de contrôle
-
-### Panel de contrôle
-- **Main Title** : Titre principal
-- **Subtitle** : Sous-titre
-- **Coordinates** : X, Y, Z
-- **Metrics** : 4 métriques avec label, valeur, status (couleur)
-- **Alerts** : 3 lignes d'alertes
-- **Presets** : Liste des configs sauvegardées (clic pour charger, X pour supprimer)
-
-### Shortcuts
-- Toutes les modifications sont en temps réel
-- Les presets se sauvegardent en localStorage
-- Compatible tous navigateurs modernes
-
-## 🎭 Vocabulaire SF intégré
-
-Le champ lexical spatial/cyberpunk est déjà dans les placeholders :
-- STELLAR NEXUS, QUANTUM ARRAY
-- CORE TEMP, RADIATION, PLASMA FLOW
-- SECTOR 7, NAVIGATION, SHIELDS
-- Coordonnées spatiales X/Y/Z
-- Timestamps futuristes
-
-## 🛠 Tech Stack
-
-- React 18
-- Vite
-- Lucide Icons
-- CSS natif (animations, CRT effects)
-- localStorage (persistence presets)
-
-## 📱 Responsive
-
-Interface optimisée 1920x1080 mais adaptable :
-- Desktop fullscreen
-- Tablet/mobile (grid adaptatif)
-
-## 🔧 Troubleshooting
-
-**"npm install" échoue :**
 ```bash
-rm -rf node_modules package-lock.json
-npm install
+npm run build
+npm run preview   # prévisualiser le build
 ```
 
-**Fonts ne chargent pas :**
-Vérifie ta connexion internet (Google Fonts)
+### Déploiement sur Netlify
 
-**Presets ne se sauvegardent pas :**
-Vérifie que localStorage est activé dans ton browser
+Le fichier `netlify.toml` configure déjà le build (`npm run build`, publication de `dist`, redirection SPA).
 
-**Performance lente dans OBS :**
-- Réduis le FPS à 30
-- Désactive les animations glitch (Pause)
-- Cache les panels non utilisés
+- **Via GitHub** : sur [netlify.com](https://netlify.com), « Add new site » → « Import an existing project », choisir ce repo. Build command `npm run build`, publish directory `dist`. Un domaine personnalisé peut être ajouté dans Site settings → Domain management.
+- **Drag & drop** : lancer `npm run build` en local puis glisser-déposer le dossier `dist` sur Netlify.
 
-## 💡 Tips performance théâtre
+## Utilisation
 
-- Prépare tes presets avant la perf
-- Nomme-les par scène/moment
-- Test complet avant le show
-- Backup du site en local + online
+### Contrôles (barre d'outils en haut à droite)
 
-## 📝 Licence
+| Bouton | Action |
+| --- | --- |
+| Icône utilisateur | Afficher / masquer l'overlay Human Scan |
+| Icône triangle | Activer / désactiver l'overlay Danger Alert |
+| Icône engrenage | Ouvrir le panneau Settings (toggles des overlays + données du scan) |
 
-Code libre d'utilisation pour performances live, installations, projets personnels.
+Toutes les modifications s'appliquent en temps réel.
+
+### OBS → Resolume
+
+1. Dans OBS : Sources → + → **Browser**
+   - Version locale : `http://localhost:5173`
+   - Version déployée : l'URL Netlify du site
+   - Résolution 1920x1080, 60 FPS
+   - Cocher « Shutdown source when not visible » (performances) et « Refresh browser when scene becomes active »
+2. Fermer le panneau Settings avant la capture.
+3. OBS → Virtual Camera, puis dans Resolume : Input → Syphon / NDI / Virtual Cam.
+
+### Dépannage
+
+- **`npm install` échoue** : `rm -rf node_modules package-lock.json && npm install`
+- **Les polices ne chargent pas** : vérifier la connexion internet (Google Fonts Orbitron / Share Tech Mono)
+- **Performance lente dans OBS** : réduire le FPS de la source à 30, masquer les overlays non utilisés
+- **Avant un show** : tester l'ensemble de la chaîne et garder une version locale en plus de la version en ligne
+
+## Structure du projet
+
+```
+├── index.html        # point d'entrée Vite
+├── src/
+│   ├── main.jsx      # montage React
+│   ├── App.jsx       # tout le HUD (styles, animations, overlays, panneau Settings)
+│   └── index.css     # styles globaux
+├── vite.config.js
+└── netlify.toml      # config de build et de redirection Netlify
+```
+
+## Stack technique
+
+React 18, Vite, Lucide Icons (`lucide-react`), CSS natif (animations, effets CRT), Google Fonts.
+
+## Crédits & licence
+
+Créé pour Ellie @ Neon Collective.
+
+Aucune licence n'est spécifiée — tous droits réservés. (L'ancien README indiquait : « Code libre d'utilisation pour performances live, installations, projets personnels. » ; un fichier LICENSE permettrait de formaliser cette intention.)
 
 ---
 
-Créé pour Ellie @ Neon Collective 💙✨
-"# scifi-hub" 
+<p align="center">
+  Fait par <a href="https://github.com/elisalien">Élisalien</a> ·
+  <a href="https://gitlab.com/elisalien/catalog">Catalogue des shaders, sources & logiciels</a>
+</p>
